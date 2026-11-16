@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Living Streets Charette</title>
+<meta name="description" content="Living Streets design charette: trace your site, place nature-based features and check the design against the J-USE Call 2 rules, reach and budget as you go.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="vendor/leaflet-geoman.css">
+<style>
+:root{
+  --bg:#eef2ee; --surface:#ffffff; --ink:#15302a; --muted:#57706a; --line:#d3ddd7;
+  --leaf:#2f7a4f; --leaf-soft:#e2f0e6; --rain:#1f6f9a; --heat:#c4602d; --stage:#dfe8e2;
+  --warn:#9a6a12; --warn-soft:#f6ecd6; --bad:#b3362b; --bad-soft:#f7e1de;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1916; --surface:#16231f; --ink:#e3eee8; --muted:#94aca4; --line:#2a3b35;
+  --leaf:#6fc28e; --leaf-soft:#1d3329; --rain:#6cb8de; --heat:#ef8a57; --stage:#1a2924;
+  --warn:#e2b45a; --warn-soft:#2e2715; --bad:#ef7a6c; --bad-soft:#3a1f1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1916; --surface:#16231f; --ink:#e3eee8; --muted:#94aca4; --line:#2a3b35;
+  --leaf:#6fc28e; --leaf-soft:#1d3329; --rain:#6cb8de; --heat:#ef8a57; --stage:#1a2924;
+  --warn:#e2b45a; --warn-soft:#2e2715; --bad:#ef7a6c; --bad-soft:#3a1f1b; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-display);line-height:1.15;margin:0}
+
+.app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);grid-template-columns:minmax(0,1fr) 400px;grid-template-areas:"bar bar" "stage rail"}
+.bar{grid-area:bar;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;flex-direction:column;min-width:0;margin-right:6px}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.brand h1{font-size:20px}
+.bar .grow{flex:1 1 0}
+.field-inline{display:flex;align-items:center;gap:6px}
+.inp,.sel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:38px;max-width:100%}
+.inp:focus-visible,.sel:focus-visible,textarea:focus-visible{outline:2px solid var(--leaf);outline-offset:1px}
+#projName{width:200px;font-weight:600}
+.btn{font-size:13px;font-weight:600;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:38px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--leaf);color:var(--surface);border-color:var(--leaf)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--bad)}
+.btn.sm{min-height:32px;padding:5px 10px;font-size:12.5px}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn:focus-visible,.tab:focus-visible,.tool:focus-visible,.seg button:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
+.menu{position:relative}
+.menu>summary{list-style:none}
+.menu>summary::-webkit-details-marker{display:none}
+.menu-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:1200;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px;display:grid;min-width:220px}
+.menu-pop button,.menu-pop a{background:none;border:0;text-align:left;padding:9px 10px;border-radius:6px;cursor:pointer;font-size:13.5px;color:var(--ink);text-decoration:none}
+.menu-pop button:hover,.menu-pop a:hover{background:var(--bg)}
+
+.stage{grid-area:stage;position:relative;min-height:0;background:var(--stage)}
+#map{position:absolute;inset:0}
+.leaflet-container{background:var(--stage);font-family:var(--f-body)}
+.map-top{position:absolute;z-index:900;top:10px;left:56px;right:10px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;pointer-events:none}
+.map-top>*{pointer-events:auto}
+.search{position:relative;flex:0 1 320px;min-width:180px}
+.search .inp{width:100%;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);margin:0;padding:4px;list-style:none;max-height:260px;overflow:auto}
+.results button{display:block;width:100%;text-align:left;background:none;border:0;padding:8px;border-radius:6px;cursor:pointer;font-size:13px}
+.results button:hover{background:var(--bg)}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.seg button{border:0;background:none;padding:6px 11px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;min-height:32px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.seg.wide{display:flex;box-shadow:none}
+.seg.wide button{flex:1}
+
+.hint{position:absolute;z-index:950;left:50%;top:58px;transform:translateX(-50%);width:min(620px,calc(100% - 24px));background:var(--ink);color:var(--surface);border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.hint .txt{flex:1 1 220px;font-size:13px}
+.hint b{display:block;font-family:var(--f-display);font-size:15px}
+.hint .btn{background:transparent;color:var(--surface);border-color:color-mix(in srgb,var(--surface) 40%,transparent)}
+.hint .btn.primary{background:var(--surface);color:var(--ink);border-color:var(--surface)}
+
+.score{position:absolute;z-index:900;left:10px;bottom:22px;right:10px;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none}
+.pill{pointer-events:auto;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 11px 5px 7px;font-size:12.5px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.18);font-variant-numeric:tabular-nums}
+.pill small{font-weight:500;color:var(--muted)}
+.mark{width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:700;flex:none;color:#fff}
+.mark.ok{background:var(--leaf)} .mark.bad{background:var(--bad)} .mark.todo{background:var(--muted)} .mark.confirm{background:var(--warn)}
+:root[data-theme="dark"] .mark,.dark-marks .mark{color:#0f1916}
+
+.banner{position:absolute;z-index:940;left:50%;transform:translateX(-50%);top:58px;width:min(560px,calc(100% - 24px));background:var(--warn-soft);color:var(--ink);border:1px solid var(--warn);border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
+.banner .txt{flex:1 1 220px}
+.photo-start{position:absolute;inset:0;z-index:800;display:grid;place-items:center;padding:16px;background:var(--stage)}
+.photo-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;max-width:420px;display:grid;gap:10px;text-align:center}
+
+.rail{grid-area:rail;background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 12px;gap:4px;flex:none}
+.tab{flex:1;background:none;border:0;border-bottom:3px solid transparent;padding:12px 6px 9px;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.tab .n{font-family:var(--f-mono);font-size:11px;width:20px;height:20px;border-radius:50%;display:inline-grid;place-items:center;background:var(--bg)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--leaf)}
+.tab[aria-selected="true"] .n{background:var(--leaf);color:var(--surface)}
+.panel{overflow-y:auto;padding:16px max(18px,env(safe-area-inset-right,0px)) 32px 18px;display:flex;flex-direction:column;gap:18px;flex:1;min-height:0}
+.sec{display:grid;gap:8px}
+.sec>h2{font-size:17px}
+.sec>h3{font-size:14px}
+.sub{color:var(--muted);font-size:13px;margin:0}
+.lede{margin:0}
+.card{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px;background:var(--surface)}
+.card.soft{background:var(--bg);border-color:transparent}
+.how{margin:0;padding-left:20px;display:grid;gap:4px;font-size:13px}
+details.how-wrap>summary{cursor:pointer;font-weight:600;font-size:13px}
+.toolgrid{display:grid;gap:6px}
+.kindlbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:6px}
+.tool{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;cursor:pointer;min-height:48px}
+.tool:hover{border-color:var(--muted)}
+.tool[aria-pressed="true"]{border-color:var(--leaf);box-shadow:inset 0 0 0 1px var(--leaf);background:var(--leaf-soft)}
+.tool .sw{width:22px;height:22px;border-radius:6px;border:2px solid rgba(0,0,0,.15)}
+.tool .sw.line{height:8px;border-radius:4px;border:0}
+.tool .sw.pt{border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;border:0}
+.tool .nm{font-weight:600;font-size:13.5px;line-height:1.25}
+.tool .nm small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.tool .ct{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.lbl{font-size:12.5px;font-weight:600;color:var(--muted);display:grid;gap:4px}
+.lbl .inp,.lbl textarea,.lbl .sel{width:100%;color:var(--ink);font-weight:400}
+textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical;min-height:58px;width:100%}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.total{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;padding-top:6px;border-top:1px solid var(--line)}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+.opts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.opt{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-weight:600;font-size:13px;cursor:pointer;min-height:36px}
+.opt[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.selcard{border:2px solid var(--leaf);border-radius:12px;padding:12px;display:grid;gap:8px;background:var(--leaf-soft)}
+.selcard h3{font-size:16px}
+.selcard .acts{display:flex;gap:6px;flex-wrap:wrap}
+.items{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.items button{width:100%;display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;background:none;border:0;border-radius:8px;padding:7px 6px;text-align:left;cursor:pointer;font-size:13px}
+.items button:hover{background:var(--bg)}
+.items .dot{width:12px;height:12px;border-radius:3px}
+.items .q{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.chk{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:10px;border-radius:10px;background:var(--bg)}
+.chk .mark{width:22px;height:22px;font-size:12px}
+.chk b{display:block;font-size:13.5px}
+.chk div>span{font-size:12.5px;color:var(--muted)}
+.chk label{display:flex;gap:8px;align-items:center;font-size:12.5px;margin-top:4px;cursor:pointer}
+.chk input[type=checkbox]{width:18px;height:18px;accent-color:var(--leaf)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:var(--bg);border-radius:10px;padding:10px}
+.stat .v{font-family:var(--f-display);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .k{font-size:12px;color:var(--muted)}
+.meter{height:10px;background:var(--bg);border-radius:6px;overflow:hidden;position:relative}
+.meter i{display:block;height:100%;background:var(--leaf);border-radius:6px}
+.meter.over i{background:var(--bad)}
+table.cost{width:100%;border-collapse:collapse;font-size:12.5px}
+table.cost td{padding:5px 0;border-bottom:1px solid var(--line);vertical-align:top}
+table.cost td:last-child{text-align:right;font-family:var(--f-mono);white-space:nowrap;padding-left:8px}
+table.cost tr.sub td{color:var(--muted)}
+table.cost tr.tot td{font-weight:700;border-bottom:0}
+.note{font-size:12px;color:var(--muted);margin:0}
+.flag{background:var(--warn-soft);border-radius:8px;padding:8px 10px;font-size:12.5px}
+
+.modal{position:fixed;inset:0;z-index:3000;background:rgba(10,20,16,.5);display:grid;place-items:center;padding:16px}
+.dlg{background:var(--surface);color:var(--ink);border-radius:14px;padding:18px;width:min(440px,100%);display:grid;gap:12px;max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.dlg.wide{width:min(980px,100%)}
+.dlg .acts{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.cmp{width:100%;border-collapse:collapse;font-size:13px}
+.cmp th,.cmp td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.cmp th{font-family:var(--f-display);font-size:15px}
+.cmp td.v{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.cmp-wrap{overflow-x:auto}
+
+.leaflet-tooltip.ftip{font-family:var(--f-body);font-size:12px;font-weight:600;padding:3px 7px}
+.pt-ico{border-radius:50%;display:grid;place-items:center;color:#fff;font:700 12px/1 var(--f-body);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.pt-ico.sel{outline:3px solid #ffd54a;outline-offset:1px}
+
+/* Draft (one-page export) */
+#draft{position:fixed;inset:0;z-index:2500;background:#5d6b66;overflow:auto;padding:16px}
+.draft-acts{position:sticky;top:0;z-index:5;display:flex;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+.sheet{background:#fff;color:#15302a;width:min(210mm,100%);margin:0 auto;padding:12mm 12mm 10mm;display:grid;gap:10px;font-size:11.5px;line-height:1.4;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.sheet h1{font-size:22px}
+.sheet h2{font-size:13px;margin-bottom:4px}
+.sheet .meta{color:#57706a;font-size:11px}
+.sheet .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:12px}
+#draftMap{height:96mm;border:1px solid #d3ddd7;border-radius:6px;background:#dfe8e2}
+.sheet .case p{margin:0 0 6px}
+.sheet .case b{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#57706a}
+.sheet .kv{display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+.sheet .kv span:nth-child(even){font-family:var(--f-mono);text-align:right}
+.sheet .cl{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:3px 12px}
+.sheet .cl li{display:flex;gap:6px;align-items:flex-start}
+.sheet .cl .mark{width:15px;height:15px;font-size:9px;color:#fff}
+.sheet .legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10.5px}
+.sheet .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.sheet .foot{color:#57706a;font-size:10px;border-top:1px solid #d3ddd7;padding-top:6px}
+.sheet .qs{white-space:pre-wrap;margin:0}
+.sheet .kv .strong{font-weight:700}
+@media print{
+  @page{size:A4 portrait;margin:8mm}
+  body>*:not(#draft){display:none!important}
+  #draft{position:static;background:none;padding:0;overflow:visible}
+  .draft-acts{display:none}
+  .sheet{box-shadow:none;width:auto;padding:0}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+@media (max-width:900px){
+  html,body{height:auto}
+  .app{height:auto;min-height:100%;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 60vh auto;grid-template-areas:"bar" "stage" "rail"}
+  .stage{min-height:360px}
+  .rail{border-left:0;border-top:1px solid var(--line)}
+  .panel{overflow:visible}
+  #projName{width:150px}
+  .map-top{left:52px}
+  .sheet .grid{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .brand h1{font-size:17px}
+  .bar .hide-sm{display:none}
+  .score .pill small{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="bar">
+    <div class="brand"><span class="eyebrow">Living Streets · J-USE Call 2</span><h1>Design charette</h1></div>
+    <input id="projName" class="inp" aria-label="Design name" placeholder="Name this design">
+    <select id="siteType" class="sel" aria-label="Site type"></select>
+    <span class="grow"></span>
+    <button class="btn" id="undoBtn" title="Undo (Ctrl+Z)">↶ Undo</button>
+    <button class="btn hide-sm" id="cmpBtn">Compare options</button>
+    <button class="btn primary" id="draftBtn">Design draft</button>
+    <details class="menu" id="fileMenu">
+      <summary class="btn" aria-label="File menu">☰ File</summary>
+      <div class="menu-pop">
+        <button id="saveFile">Save design file…</button>
+        <button id="openFile">Open design file…</button>
+        <button id="newDesign">Start a new design</button>
+        <a href="../">Back to the information session</a>
+      </div>
+    </details>
+  </header>
+
+  <main class="stage" aria-label="Site plan">
+    <div id="map"></div>
+    <div class="map-top">
+      <form class="search" id="searchForm" role="search">
+        <input class="inp" id="searchQ" type="search" placeholder="Find a place in Jamaica…" aria-label="Find a place" autocomplete="off">
+        <ul class="results" id="results" hidden></ul>
+      </form>
+      <div class="seg" id="baseSeg" role="group" aria-label="Map base">
+        <button data-b="sat">Satellite</button><button data-b="osm">Street map</button><button data-b="photo">Site photo</button>
+      </div>
+    </div>
+    <div class="banner" id="banner" hidden></div>
+    <div class="hint" id="hint" hidden></div>
+    <div class="photo-start" id="photoStart" hidden>
+      <div class="photo-card">
+        <h2>Use a site photo or plan</h2>
+        <p class="sub">Upload an aerial screenshot, a drone photo or a scanned plan of the site. You'll then mark one known length, such as a 5 m parking bay, so the tool can measure areas.</p>
+        <button class="btn primary" id="pickPhoto">Choose an image…</button>
+        <button class="btn ghost" id="backToMap">Back to the satellite map</button>
+      </div>
+    </div>
+    <div class="score" id="score"></div>
+  </main>
+
+  <aside class="rail">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="site"><span class="n">1</span>Site</button>
+      <button class="tab" role="tab" data-tab="design"><span class="n">2</span>Design</button>
+      <button class="tab" role="tab" data-tab="check"><span class="n">3</span>Check</button>
+    </div>
+    <div class="panel" id="panel-site" role="tabpanel"></div>
+    <div class="panel" id="panel-design" role="tabpanel" hidden></div>
+    <div class="panel" id="panel-check" role="tabpanel" hidden></div>
+  </aside>
+</div>
+
+<div class="modal" id="modal" hidden></div>
+<div id="draft" hidden></div>
+<input type="file" id="photoInput" accept="image/*" hidden>
+<input type="file" id="jsonInput" accept=".json,application/json" hidden>
+
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/leaflet-geoman.min.js"></script>
+<script>
+/* =========================================================
+   CALL DATA — J-USE Second Call concept note (Living Streets, Oct 2026).
+   Keep in step with ../index.html. Rates are the planning rates in JMD.
+   ========================================================= */
+const STREAMS = {
+  1:{label:'Stream 1 · Public realm', ceiling:15e6, topup:2.25e6, reach:1000, plantFloor:2e6},
+  2:{label:'Stream 2 · Private-sector clusters', ceiling:30e6, topup:4.5e6, reach:5000, plantFloor:4e6}
+};
+/* Concept-note budget split (JMD m). Used to add design, inclusion, MEL, management and
+   contingency on top of the works the team draws, and to estimate planting spend. */
+const BUDGET = {
+  1:{works:{civil:8.3, planting:2.2, garden:0.3}, soft:{design:1.2, inclusion:0.6, mel:1.1, pm:0.3, contingency:1.0}},
+  2:{works:{civil:16.6, planting:4.4, garden:0.8}, soft:{design:2.0, inclusion:1.4, mel:2.0, pm:0.8, contingency:2.0}}
+};
+const SOFT_LABEL = {design:'Survey, hydraulic sizing, detailed design', inclusion:'Inclusion, accessibility and engagement', mel:'Monitoring, evaluation and learning', pm:'Project management and reporting', contingency:'Contingency (about 7%)'};
+
+const SITES = {
+  street1:{stream:1, code:'Stream 1 · Site type A', name:'Street corridor',
+    comps:['swale','cells','forebay','trees','perm','park','habitat','access','signs'],
+    hazard:'Flash flooding and ponding in cloudbursts, and extreme heat on paved streets.',
+    exposed:'Pedestrians, shoppers, vendors, shop workers and residents of the drained catchment; road and drain assets.',
+    benefit:'Less disruption, safer access, cooler routes and rest points, continuity of trade.'},
+  market1:{stream:1, code:'Stream 1 · Site type B', name:'Market or transport-centre frontage',
+    comps:['swale','cells','forebay','trees','perm','park','habitat','access','signs','greenroof'],
+    hazard:'Ponding across market and transport yards in cloudbursts, and heat on open paving where people sell and wait.',
+    exposed:'Vendors, shoppers, commuters, drivers and neighbouring businesses; drains and yard surfaces.',
+    benefit:'Trading and transport that keep running in rain, cooler selling and waiting areas, safer crossings.'},
+  campus1:{stream:1, code:'Stream 1 · Site type C', name:'Public facility campus',
+    comps:['swale','cells','forebay','trees','perm','garden','schoolyard','habitat','access','signs'],
+    hazard:'Heat in yards, classrooms and waiting areas, and flooding of yards and access routes.',
+    exposed:'Pupils, patients, teachers, health workers and nearby households.',
+    benefit:'Cooler yards and waiting areas, fewer days disrupted, roof water and produce for school feeding.'},
+  street2:{stream:2, code:'Stream 2 · Priority cluster', name:'Merchant-association commercial street',
+    comps:['swale','cells','forebay','trees','perm','park','habitat','access','signs'],
+    hazard:'Flash flooding and ponding in cloudbursts, and heat on fully paved streets.',
+    exposed:'Shoppers, vendors, pedestrians and residents; shop stock and premises.',
+    benefit:'Trading days kept, cooler shopfronts and pitches, fewer flood losses.'},
+  yard2:{stream:2, code:'Stream 2 · Priority cluster', name:'Industrial estate',
+    comps:['swale','forebay','trees','perm','facade','habitat','access','signs'],
+    hazard:'Extreme heat on metal-clad buildings and paved yards, and cloudburst flooding of aprons and internal roads.',
+    exposed:'Workers, drivers and suppliers; households in the buffer zone; loading bays and equipment.',
+    benefit:'Lower heat stress on shift, roads and bays that stay open in rain, a cooler and cleaner edge for neighbours.'}
+};
+
+/* Drawing tools. geom: poly | line | tree | point.  rate = JMD per m² (lines: per m² of length × width),
+   each = JMD per item. comp = feature in the concept-note library (decides which site types offer it). */
+const KIND = {living:'Living', support:'Supporting', people:'People', open:'Open menu'};
+const TOOLS = {
+  /* What's there now */
+  boundary:{ex:true, geom:'poly', name:'Site boundary', plain:'The edge of the area you can work in.', color:'#ffd54a', single:true},
+  paved:{ex:true, geom:'poly', name:'Paved area that drains here', plain:'Road, yard or car park whose rain runs to this site. This is the catchment the design must treat.', color:'#6f8aa0'},
+  roof:{ex:true, geom:'poly', name:'Roof', plain:'Roofs that could feed a rain tank for a food garden.', color:'#b9805e'},
+  etree:{ex:true, geom:'point', name:'Existing tree', plain:'Healthy mature trees must stay, with root zones protected.', color:'#1d5e36', glyph:'T'},
+  low:{ex:true, geom:'point', name:'Low point or drain', plain:'Where water collects or leaves the site.', color:'#1f6f9a', glyph:'▼'},
+  /* Living */
+  swale:{kind:'living', geom:'line', name:'Planted drain', tech:'Bioswale', plain:'A long planted channel beside the road. Draw it as a line.', color:'#2e8b57', planted:true, living:true, rate:19000, width:1.5},
+  cells:{kind:'living', geom:'poly', name:'Rain garden', tech:'Rain garden cell', plain:'A small sunken bed at the kerb, 15–40 m² each.', color:'#17a589', planted:true, living:true, rate:19000},
+  trees:{kind:'living', geom:'tree', name:'Shade tree', tech:'Structural-soil street tree', plain:'Tap to plant. The circle shows canopy at maturity.', color:'#2f7a4f'},
+  park:{kind:'living', geom:'poly', name:'Pocket rain park', tech:'Pocket rain park', plain:'A sunken garden with trees and seats on a spare corner, 150–600 m².', color:'#58a55c', planted:true, living:true, rate:19000, placeholder:'Priced here at the rain-garden rate until the charette bill of quantities'},
+  garden:{kind:'living', geom:'poly', name:'Roof-water food garden', tech:'Roof-water productive garden', plain:'Raised food beds watered from a roof tank, 20–60 m². Keep it out of the runoff path.', color:'#e0a526', planted:true, food:true, rate:7500},
+  habitat:{kind:'living', geom:'poly', name:'Wildlife planting', tech:'Habitat features', plain:'Native flowering beds, log piles and bird boxes.', color:'#a4c639', planted:true, rate:5500},
+  /* Supporting */
+  forebay:{kind:'support', geom:'point', name:'Silt trap', tech:'Sediment forebay', plain:'Where water first comes in. Place one at each main inlet.', color:'#7a6a55', glyph:'S', each:196000},
+  inlet:{kind:'support', comp:'forebay', geom:'point', name:'Kerb inlet', tech:'Kerb inlet', plain:'A gap in the kerb that lets street water into the planting.', color:'#4f6f86', glyph:'I', each:60000},
+  perm:{kind:'support', geom:'poly', name:'Paving that lets water through', tech:'Permeable paving', plain:'Counts in the footprint but not as planted.', color:'#9c8f7c', rate:17500},
+  /* People */
+  access:{kind:'people', geom:'line', name:'Safe, shaded route', tech:'Accessible route', plain:'Level route at least 1.5 m clear. Draw it as a line.', color:'#e07b39', rate:10300, width:1.5},
+  ramp:{kind:'people', comp:'access', geom:'point', name:'Kerb ramp', plain:'One at every crossing.', color:'#c4602d', glyph:'R', each:40000},
+  bench:{kind:'people', comp:'access', geom:'point', name:'Shaded bench', plain:'Rest point under shade.', color:'#a0522d', glyph:'B', each:49000},
+  light:{kind:'people', comp:'access', geom:'point', name:'Solar light', plain:'Sited to answer safety concerns.', color:'#d4a017', glyph:'L', each:120000},
+  signs:{kind:'people', geom:'point', name:'Information sign', plain:'2–3 panels explaining the planting.', color:'#5a5f8a', glyph:'i', each:150000},
+  /* Open menu */
+  facade:{kind:'open', geom:'line', name:'Green wall', tech:'Climbing-plant façade', plain:'Draw along a sun-facing wall. Area is length × height.', color:'#6b8f3a', rate:7000, height:3, notGround:true},
+  greenroof:{kind:'open', geom:'poly', name:'Green roof', tech:'Green roof (showcase)', plain:'Needs a structural engineer’s letter.', color:'#7fb069', notGround:true, unpriced:'Green roofs are priced at the charette, so this one is not in the total yet'},
+  schoolyard:{kind:'open', geom:'poly', name:'Greener schoolyard', tech:'Depaved green schoolyard', plain:'Paving swapped for trees, beds and soft play.', color:'#8fbf4d', planted:true, rate:5500}
+};
+const TREE_PIT = {structural:{rate:207000, label:'Structural-soil pit (J$207,000)'}, standard:{rate:74000, label:'Standard pit (J$74,000)'}, open:{rate:15000, label:'Open ground (J$15,000)'}};
+const TANK_RATE = 250; /* J$ per gallon of tank system */
+const DEFAULT_ASSUME = {treatRatio:3, canopyR:5, treePit:'structural'};
+
+/* =========================================================
+   STATE
+   ========================================================= */
+const STORE_KEY = 'ls-charette-v1', PHOTO_KEY = 'ls-charette-photo-v1';
+const uid = () => Math.random().toString(36).slice(2,9);
+function freshProject(){
+  return {v:1, name:'', site:'street1', focus:'both',
+    base:{kind:'sat', center:[18.12,-77.3], zoom:9, scale:0, photoW:0, photoH:0},
+    ex:[], options:[{id:uid(), name:'Option A', f:[]}], active:0,
+    people:{users:'', residents:'', other:''},
+    climate:{hazard:'', exposed:'', benefit:''}, questions:'',
+    confirm:{tall:false, native:false, drawdown:false},
+    assume:{...DEFAULT_ASSUME}};
+}
+let P = freshProject(), PHOTO = null;
+const ui = {tab:'site', tool:null, sel:null, rect:false, placing:false, calibrating:false};
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+function load(){
+  const raw = lsGet(STORE_KEY);
+  if(raw){ try{ const p = JSON.parse(raw); if(p && p.v===1){ P = Object.assign(freshProject(), p); P.assume = Object.assign({...DEFAULT_ASSUME}, p.assume||{}); } }catch(e){} }
+  PHOTO = lsGet(PHOTO_KEY);
+  if(P.base.kind==='photo' && !PHOTO) P.base.kind='sat';
+  if(!P.climate.hazard){ const s=SITES[P.site]; P.climate={hazard:s.hazard, exposed:s.exposed, benefit:s.benefit}; }
+}
+let saveWarned = false;
+function save(){
+  const ok = lsSet(STORE_KEY, JSON.stringify(P));
+  if(!ok && !saveWarned){ saveWarned=true; toast('This browser is not keeping a copy. Use File › Save design file to keep your work.'); }
+}
+const hist = []; let future = [];
+function snapshot(){ hist.push(JSON.stringify(P)); if(hist.length>80) hist.shift(); future=[]; updateUndo(); }
+function commit(){ snapshot(); save(); refresh(); }
+function undo(){
+  if(hist.length<2) return;
+  future.push(hist.pop());
+  P = JSON.parse(hist[hist.length-1]);
+  ui.sel = null; save(); renderLayers(); refresh(true); updateUndo();
+}
+function updateUndo(){ const b=document.getElementById('undoBtn'); if(b) b.disabled = hist.length<2; }
+const opt = () => P.options[P.active];
+const site = () => SITES[P.site];
+const stream = () => STREAMS[site().stream];
+function findF(id){ return P.ex.find(f=>f.id===id) || opt().f.find(f=>f.id===id); }
+
+/* =========================================================
+   GEOMETRY  (local metric projection; photo bases use the calibrated scale)
+   ========================================================= */
+function toXY(pts){
+  if(P.base.kind==='photo'){ const s=P.base.scale||0; return pts.map(p=>[p[1]*s, p[0]*s]); }
+  const lat0 = pts.reduce((a,p)=>a+p[0],0)/pts.length, k = Math.cos(lat0*Math.PI/180);
+  return pts.map(p=>[p[1]*111320*k, p[0]*110574]);
+}
+function polyArea(pts){ if(pts.length<3) return 0; const q=toXY(pts); let a=0; for(let i=0;i<q.length;i++){ const [x1,y1]=q[i], [x2,y2]=q[(i+1)%q.length]; a+=x1*y2-x2*y1; } return Math.abs(a)/2; }
+function lineLen(pts){ const q=toXY(pts); let d=0; for(let i=1;i<q.length;i++) d+=Math.hypot(q[i][0]-q[i-1][0], q[i][1]-q[i-1][1]); return d; }
+function ptIn(p, poly){ let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const [yi,xi]=poly[i],[yj,xj]=poly[j]; if(((yi>p[0])!==(yj>p[0])) && (p[1] < (xj-xi)*(p[0]-yi)/(yj-yi)+xi)) c=!c; } return c; }
+function segX(a,b,c,d){ const o=(p,q,r)=>Math.sign((q[1]-p[1])*(r[0]-p[0])-(q[0]-p[0])*(r[1]-p[1])); return o(a,b,c)!==o(a,b,d) && o(c,d,a)!==o(c,d,b); }
+function edges(pts, closed){ const e=[]; for(let i=1;i<pts.length;i++) e.push([pts[i-1],pts[i]]); if(closed&&pts.length>2) e.push([pts[pts.length-1],pts[0]]); return e; }
+function touches(garden, other, otherClosed){
+  if(otherClosed && garden.some(p=>ptIn(p,other))) return true;
+  if(other.some(p=>ptIn(p,garden))) return true;
+  const ge=edges(garden,true), oe=edges(other,otherClosed);
+  return ge.some(([a,b])=>oe.some(([c,d])=>segX(a,b,c,d)));
+}
+function metresPerUnit(){ return P.base.kind==='photo' ? (P.base.scale||0) : null; }
+function needsScale(){ return P.base.kind==='photo' && !P.base.scale; }
+
+/* Quantity of one feature: m² for areas and lines (length × width), count for points. */
+function qty(f){
+  const T=TOOLS[f.t];
+  if(T.geom==='poly') return polyArea(f.c);
+  if(T.geom==='line'){ const L=lineLen(f.c); return T.height ? L*(f.p.height??T.height) : L*(f.p.width??T.width); }
+  return 1;
+}
+function qtyLabel(f){
+  const T=TOOLS[f.t];
+  if(needsScale() && (T.geom==='poly'||T.geom==='line')) return 'set the scale';
+  if(T.geom==='poly') return fmtM2(qty(f));
+  if(T.geom==='line') return Math.round(lineLen(f.c))+' m · '+fmtM2(qty(f));
+  return '';
+}
+function featCost(f){
+  const T=TOOLS[f.t], a=P.assume;
+  if(T.ex || T.unpriced) return 0;
+  if(f.t==='trees') return TREE_PIT[a.treePit].rate;
+  if(T.each) return T.each;
+  let c = qty(f)*T.rate;
+  if(f.t==='garden') c += (f.p.tanks??1)*(f.p.gallons??1000)*TANK_RATE;
+  return c;
+}
+
+/* =========================================================
+   METRICS + CHECKS
+   ========================================================= */
+function metrics(o){
+  const S=site(), st=STREAMS[S.stream], a=P.assume;
+  let footprint=0, planted=0, living=0, gardenA=0, trees=0, works=0, open=false;
+  const lines={}, flags=[];
+  for(const f of o.f){
+    const T=TOOLS[f.t], q=qty(f), c=featCost(f);
+    if(T.geom==='poly'||T.geom==='line'){
+      if(!T.notGround){ footprint+=q; if(T.planted) planted+=q; }
+      if(T.living) living+=q;
+    }
+    if(f.t==='garden') gardenA+=q;
+    if(f.t==='trees') trees++;
+    if(T.kind==='open') open=true;
+    works+=c;
+    const L = lines[f.t] || (lines[f.t]={t:f.t, n:0, q:0, cost:0}); L.n++; L.q+=q; L.cost+=c;
+    if(T.placeholder && !flags.includes(T.placeholder)) flags.push(T.placeholder);
+    if(T.unpriced && !flags.includes(T.unpriced)) flags.push(T.unpriced);
+  }
+  const catchment = P.ex.filter(f=>f.t==='paved').reduce((s,f)=>s+polyArea(f.c),0);
+  const treatCap = living*a.treatRatio;
+  const treated = Math.min(catchment, treatCap);
+  const shade = trees*Math.PI*a.canopyR*a.canopyR;
+  const B=BUDGET[S.stream], wSum=B.works.civil+B.works.planting+B.works.garden, sSum=Object.values(B.soft).reduce((x,y)=>x+y,0);
+  const plantShare = B.works.planting/wSum;
+  const soft = Object.fromEntries(Object.entries(B.soft).map(([k,v])=>[k, works*v/wSum]));
+  const total = works + works*sSum/wSum;
+  const plantingSpend = works*plantShare; /* concept-note share of works spent on planting, soils and care */
+  const ceiling = st.ceiling + (open ? st.topup : 0);
+  const people = ['users','residents','other'].reduce((s,k)=>s+(+P.people[k]||0),0);
+  const etrees = P.ex.filter(f=>f.t==='etree'), removed = etrees.filter(f=>f.p.remove).length;
+  const gardens = o.f.filter(f=>f.t==='garden');
+  const wet = o.f.filter(f=>['swale','cells','park'].includes(f.t));
+  const foodClash = gardens.some(g=>wet.some(w=>touches(g.c, w.c, TOOLS[w.t].geom==='poly')));
+  const tanks = gardens.reduce((s,g)=>s+(g.p.tanks??1),0);
+  return {footprint, planted, plantedPct: footprint? planted/footprint : null, living, catchment, treated, treatedPct: catchment? treatCap/catchment : null,
+    trees, shade, gardenA, tanks, works, soft, total, ceiling, open, plantingSpend, plantFloor:st.plantFloor, people, reach:st.reach,
+    etrees:etrees.length, removed, foodClash, lines, flags};
+}
+function checks(m){
+  const c=[], scaleBad=needsScale();
+  c.push({id:'planted', group:'Design rules', label:'At least 60% planted',
+    status: scaleBad?'todo': !m.footprint?'todo': m.plantedPct>=.6?'ok':'bad',
+    detail: !m.footprint ? 'Add features on the Design tab.' : `${Math.floor(m.plantedPct*100)}% planted: ${fmtM2(m.planted)} of ${fmtM2(m.footprint)} on the ground. Paving and routes count in the footprint but not as planted.`});
+  c.push({id:'runoff', group:'Design rules', label:'Half the runoff through living media',
+    status: scaleBad?'todo': !m.catchment?'todo': m.treatedPct>=.5?'ok':'bad',
+    detail: !m.catchment ? 'Mark the paved area that drains here on the Site tab.' : `Planted drains, rain gardens and rain parks can take about ${Math.floor(Math.min(m.treatedPct,9.99)*100)+'%'} of the ${fmtM2(m.catchment)} paved catchment (needs 50%).`});
+  c.push({id:'floor', group:'Design rules', label:`Planting floor (${fmtJ(m.plantFloor)})`,
+    status: !m.works?'todo': m.plantingSpend>=m.plantFloor?'ok':'bad',
+    detail: `About ${fmtJ(m.plantingSpend)} on planting, soils and 12 months’ care, taking the concept-note share (about 20% of works). Itemise it at design stage.`});
+  c.push({id:'keep', group:'Design rules', label:'Keep existing trees',
+    status: m.removed?'bad':'ok',
+    detail: !m.etrees ? 'No existing trees marked. Mark any on the Site tab.' : m.removed ? `${m.removed} of ${m.etrees} existing trees marked for removal.` : `All ${m.etrees} existing trees kept.`});
+  c.push({id:'food', group:'Design rules', label:'No food in the runoff path',
+    status: m.foodClash?'bad':'ok',
+    detail: m.foodClash ? 'A food garden touches a planted drain, rain garden or rain park. Move it to clean roof water.' : m.gardenA ? 'Food beds are clear of the stormwater features.' : 'No food garden in this option.'});
+  c.push({id:'tall', group:'Design rules', label:'Shade from day one', confirm:'tall', status: P.confirm.tall?'ok':'confirm', detail:'Trees planted at least 2.5 m tall where cooling is claimed.'});
+  c.push({id:'native', group:'Design rules', label:'At least 60% native', confirm:'native', status: P.confirm.native?'ok':'confirm', detail:'Of trees and shrubs by count, no NEPA-listed invasives, nectar all year.'});
+  c.push({id:'drawdown', group:'Design rules', label:'48-hour drawdown', confirm:'drawdown', status: P.confirm.drawdown?'ok':'confirm', detail:'No standing water after two days. Plan an infiltration test at design stage.'});
+  c.push({id:'reach', group:'Call thresholds', label:`People reached (${m.reach.toLocaleString()}+)`,
+    status: !m.people?'todo': m.people>=m.reach?'ok':'bad', detail: m.people ? `${m.people.toLocaleString()} direct beneficiaries entered on the Site tab.` : 'Enter who uses the site on the Site tab.'});
+  c.push({id:'cost', group:'Call thresholds', label:`Within the ${fmtJ(m.ceiling)} ceiling`,
+    status: scaleBad?'todo': !m.works?'todo': m.total<=m.ceiling?'ok':'bad',
+    detail: m.works ? `Estimated ${fmtJ(m.total)} including design, inclusion, monitoring, management and contingency.${m.open?' Includes the 15% open-menu top-up.':''}` : 'Add features to see a cost.'});
+  return c;
+}
+
+/* =========================================================
+   FORMATTING + SMALL UI HELPERS
+   ========================================================= */
+const esc = s => String(s??'').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+function fmtJ(n){ if(n>=1e6) return 'J$'+(n/1e6).toFixed(n>=1e7?1:2)+'m'; return 'J$'+Math.round(n).toLocaleString(); }
+function fmtM2(n){ return Math.round(n).toLocaleString()+' m²'; }
+const MARK = {ok:'✓', bad:'✕', todo:'·', confirm:'?'};
+const markHTML = s => `<span class="mark ${s}" aria-hidden="true">${MARK[s]}</span>`;
+function toast(msg){
+  const b=document.getElementById('banner'); b.innerHTML=`<span class="txt">${esc(msg)}</span><button class="btn sm" onclick="this.parentNode.hidden=true">OK</button>`; b.hidden=false;
+  clearTimeout(toast.t); toast.t=setTimeout(()=>{ b.hidden=true; }, 6000);
+}
+function dialog({title, html='', fields=[], ok='OK', cancel='Cancel', wide=false, danger=false}){
+  return new Promise(res=>{
+    const m=document.getElementById('modal');
+    m.innerHTML = `<div class="dlg${wide?' wide':''}" role="dialog" aria-modal="true" aria-labelledby="dlgT"><h2 id="dlgT">${esc(title)}</h2>${html}
+      ${fields.map(f=>`<label class="lbl">${esc(f.label)}<input class="inp" id="dlg_${f.id}" type="${f.type||'text'}" value="${esc(f.value??'')}" ${f.attrs||''}></label>`).join('')}
+      <div class="acts">${cancel?`<button class="btn" data-r="0">${esc(cancel)}</button>`:''}${ok?`<button class="btn ${danger?'danger':'primary'}" data-r="1">${esc(ok)}</button>`:''}</div></div>`;
+    m.hidden=false;
+    const done = r=>{ const vals=Object.fromEntries(fields.map(f=>[f.id, document.getElementById('dlg_'+f.id).value])); m.hidden=true; m.innerHTML=''; res(r?vals:null); };
+    m.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>done(b.dataset.r==='1'));
+    m.onclick = e=>{ if(e.target===m) done(false); };
+    m.onkeydown = e=>{ if(e.key==='Escape') done(false); if(e.key==='Enter' && e.target.tagName==='INPUT') done(true); };
+    const first = m.querySelector('input')||m.querySelector('[data-r="1"]')||m.querySelector('button'); first && first.focus();
+  });
+}
+
+/* =========================================================
+   MAP
+   ========================================================= */
+let map=null, ink=null;
+const layerById = new Map();
+const TILES = {
+  sat:{url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr:'Imagery © Esri, Maxar, Earthstar Geographics', maxNativeZoom:19},
+  osm:{url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr:'© OpenStreetMap contributors', maxNativeZoom:19}
+};
+function addBase(m, kind, photo){
+  if(kind==='photo'){
+    const b=[[0,0],[P.base.photoH,P.base.photoW]];
+    return L.imageOverlay(photo, b).addTo(m);
+  }
+  const t=TILES[kind];
+  const l=L.tileLayer(t.url, {attribution:t.attr, maxNativeZoom:t.maxNativeZoom, maxZoom:22}).addTo(m);
+  if(kind==='sat') L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {maxNativeZoom:19, maxZoom:22, opacity:.9}).addTo(m);
+  return l;
+}
+function buildMap(){
+  cancelTool();
+  if(map){ map.off(); map.remove(); map=null; }
+  const photo = P.base.kind==='photo';
+  document.getElementById('photoStart').hidden = !(photo && !PHOTO);
+  document.getElementById('searchForm').hidden = photo;
+  map = L.map('map', photo ? {crs:L.CRS.Simple, minZoom:-5, maxZoom:5, zoomSnap:.25, attributionControl:false} : {maxZoom:22, zoomSnap:.5});
+  if(photo && PHOTO){ addBase(map,'photo',PHOTO); map.fitBounds([[0,0],[P.base.photoH,P.base.photoW]]); }
+  else if(!photo){ addBase(map,P.base.kind); map.setView(P.base.center, P.base.zoom); }
+  ink = L.featureGroup().addTo(map);
+  map.pm.setGlobalOptions({snappable:true, snapDistance:14, allowSelfIntersection:false});
+  map.on('pm:create', onCreate);
+  map.on('click', onMapClick);
+  map.on('zoomend', restyleLines);
+  map.on('moveend', ()=>{ if(P.base.kind!=='photo'){ const c=map.getCenter(); P.base.center=[+c.lat.toFixed(6),+c.lng.toFixed(6)]; P.base.zoom=map.getZoom(); save(); } });
+  renderLayers();
+  syncBaseSeg();
+}
+function syncBaseSeg(){ document.querySelectorAll('#baseSeg button').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.b===P.base.kind))); }
+function pxPerMetre(){
+  if(P.base.kind==='photo'){ const s=P.base.scale||1; return Math.pow(2,map.getZoom())/s; }
+  const lat=map.getCenter().lat; return Math.pow(2,map.getZoom()+8)/(40075016.686*Math.cos(lat*Math.PI/180));
+}
+function lineWeight(f){ const T=TOOLS[f.t]; const w = T.height ? 0.6 : (f.p.width??T.width); return Math.max(4, Math.min(80, w*pxPerMetre())); }
+function restyleLines(){ for(const [id,l] of layerById){ const f=findF(id); if(f && TOOLS[f.t].geom==='line') l.setStyle({weight:lineWeight(f)}); } }
+function canopyUnits(r){ return P.base.kind==='photo' ? r/(P.base.scale||1) : r; }
+
+function styleFor(f, selected){
+  const T=TOOLS[f.t], s = selected ? {color:'#ffd54a', weight:4, dashArray:null} : {};
+  if(f.t==='boundary') return {color:'#ffd54a', weight:3, dashArray:'8 6', fill:false, ...(selected?{color:'#fff'}:{})};
+  if(f.t==='paved') return {color:T.color, weight:2, fillColor:T.color, fillOpacity:.32, dashArray:'4 4', ...s};
+  if(f.t==='roof') return {color:T.color, weight:2, fillColor:T.color, fillOpacity:.35, ...s};
+  if(T.geom==='line') return {color:selected?'#ffd54a':T.color, opacity:.92, weight:lineWeight(f), lineCap:'round', lineJoin:'round'};
+  if(T.geom==='tree') return {color:'#fff', weight:selected?3:1.5, fillColor:T.color, fillOpacity:.55, ...(selected?{color:'#ffd54a'}:{})};
+  return {color:'#fff', weight:2, fillColor:T.color, fillOpacity:.68, ...s};
+}
+function ptIcon(f, selected){
+  const T=TOOLS[f.t], removed = f.t==='etree' && f.p.remove;
+  const bg = removed ? '#b3362b' : T.color, g = removed ? '✕' : T.glyph, sz = f.t==='etree'?26:24;
+  return L.divIcon({className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz/2],
+    html:`<div class="pt-ico${selected?' sel':''}" style="width:${sz}px;height:${sz}px;background:${bg}">${g}</div>`});
+}
+function makeLayer(f, m, interactive=true){
+  const T=TOOLS[f.t]; let l;
+  if(T.geom==='poly') l=L.polygon(f.c, styleFor(f));
+  else if(T.geom==='line') l=L.polyline(f.c, styleFor(f));
+  else if(T.geom==='tree') l=L.circle(f.c, {radius:canopyUnits(P.assume.canopyR), ...styleFor(f)});
+  else l=L.marker(f.c, {icon:ptIcon(f), draggable:interactive, keyboard:interactive});
+  if(interactive){
+    l.on('click', e=>{ if(ui.tool) return; L.DomEvent.stopPropagation(e); select(f.id); });
+    if(l instanceof L.Marker) l.on('dragend', ()=>{ const ll=l.getLatLng(); f.c=[ll.lat,ll.lng]; commit(); });
+    l.bindTooltip(()=>TOOLS[f.t].name + (qtyLabel(f)?' · '+qtyLabel(f):''), {className:'ftip', sticky:T.geom!=='point', direction:'top'});
+  }
+  return l;
+}
+function renderLayers(){
+  if(!map) return;
+  for(const l of layerById.values()) l.pm && l.pm.enabled && l.pm.enabled() && l.pm.disable();
+  ink.clearLayers(); layerById.clear();
+  const order = f => ({paved:0, roof:1, boundary:2})[f.t] ?? (TOOLS[f.t].geom==='poly'?3: TOOLS[f.t].geom==='line'?4: TOOLS[f.t].geom==='tree'?5:6);
+  const all = [...P.ex, ...opt().f].sort((a,b)=>order(a)-order(b));
+  for(const f of all){ const l=makeLayer(f,map); l.addTo(ink); layerById.set(f.id,l); }
+  if(ui.sel) applySelection();
+}
+
+/* ---------- selection & editing ---------- */
+function select(id){
+  if(ui.sel && ui.sel!==id) deselect(false);
+  ui.sel=id; applySelection();
+  const f=findF(id);
+  const tab = TOOLS[f.t].ex ? 'site' : 'design'; setTab(tab);
+  renderSel(); document.getElementById('panel-'+tab).scrollTop=0;
+}
+function applySelection(){
+  const f=findF(ui.sel), l=layerById.get(ui.sel); if(!f||!l){ ui.sel=null; return; }
+  const T=TOOLS[f.t];
+  if(l instanceof L.Marker){ l.setIcon(ptIcon(f,true)); return; }
+  l.setStyle(styleFor(f,true)); l.bringToFront();
+  if(T.geom==='poly'||T.geom==='line'){
+    l.pm.enable({allowSelfIntersection:false, draggable:true, snappable:true});
+    l.off('pm:edit'); l.on('pm:edit', ()=>{ syncGeom(f,l); });
+  } else if(T.geom==='tree'){
+    l.pm.enableLayerDrag();
+    l.off('pm:dragend'); l.on('pm:dragend', ()=>{ const ll=l.getLatLng(); f.c=[ll.lat,ll.lng]; ui.lastEdit=Date.now(); commit(); });
+  }
+}
+function syncGeom(f,l){
+  const T=TOOLS[f.t]; let ll=l.getLatLngs(); if(T.geom==='poly') ll=ll[0];
+  f.c = ll.map(p=>[p.lat,p.lng]); ui.lastEdit=Date.now(); commit();
+}
+function deselect(render=true){
+  const l=layerById.get(ui.sel), f=findF(ui.sel);
+  if(l){ if(l.pm){ l.pm.enabled && l.pm.enabled() && l.pm.disable(); l.pm.disableLayerDrag && l.pm.disableLayerDrag(); }
+    if(f){ if(l instanceof L.Marker) l.setIcon(ptIcon(f)); else l.setStyle(styleFor(f)); } }
+  ui.sel=null; if(render) renderSel();
+}
+function deleteSel(){
+  const id=ui.sel; if(!id) return; deselect(false);
+  P.ex = P.ex.filter(f=>f.id!==id); opt().f = opt().f.filter(f=>f.id!==id);
+  renderLayers(); commit(); renderSel();
+}
+
+/* ---------- drawing tools ---------- */
+function startTool(t){
+  if(needsScale() && t!=='__calib'){ toast('Set the scale first: mark one known length on the photo.'); startCalib(); return; }
+  cancelTool(); deselect();
+  ui.tool=t; const T=TOOLS[t];
+  if(T.geom==='poly'||T.geom==='line'){
+    const shape = T.geom==='line' ? 'Line' : (ui.rect?'Rectangle':'Polygon');
+    map.pm.enableDraw(shape, {pathOptions:{color:T.color, fillColor:T.color, fillOpacity:.4, weight:3}, templineStyle:{color:T.color, weight:3}, hintlineStyle:{color:T.color, dashArray:'5 5'}, continueDrawing:false, finishOn:null});
+  } else { ui.placing=true; map.getContainer().style.cursor='crosshair'; }
+  showHint(); syncToolButtons(); mapIntoView();
+}
+function mapIntoView(){ if(window.matchMedia('(max-width:900px)').matches) document.querySelector('.stage').scrollIntoView({behavior:'smooth', block:'start'}); }
+function startCalib(){
+  cancelTool(); deselect(); ui.tool='__calib'; ui.calibrating=true;
+  map.pm.enableDraw('Line', {templineStyle:{color:'#ffd54a',weight:3}, hintlineStyle:{color:'#ffd54a',dashArray:'5 5'}, pathOptions:{color:'#ffd54a'}});
+  showHint(); mapIntoView();
+}
+function cancelTool(){
+  if(map){ map.pm.disableDraw(); map.getContainer().style.cursor=''; }
+  ui.tool=null; ui.placing=false; ui.calibrating=false;
+  const h=document.getElementById('hint'); if(h) h.hidden=true;
+  syncToolButtons();
+}
+function drawShape(){ return map.pm.Draw.getActiveShape && map.pm.Draw.getActiveShape(); }
+function finishDraw(){ const s=drawShape(); if(s && map.pm.Draw[s]) map.pm.Draw[s]._finishShape(); }
+function undoPoint(){ const s=drawShape(); if(s && map.pm.Draw[s] && map.pm.Draw[s]._removeLastVertex) map.pm.Draw[s]._removeLastVertex(); }
+function showHint(){
+  const h=document.getElementById('hint'), t=ui.tool; if(!t){ h.hidden=true; return; }
+  let title, txt, btns;
+  if(t==='__calib'){
+    title='Set the scale'; txt='Tap both ends of something you know the length of, such as a 5 m parking bay or a 3 m lane, then press Finish.';
+    btns=`<button class="btn sm" data-h="undo">Undo point</button><button class="btn sm primary" data-h="finish">Finish</button><button class="btn sm" data-h="cancel">Cancel</button>`;
+  } else {
+    const T=TOOLS[t]; title=T.name;
+    if(T.geom==='poly'){ txt = ui.rect ? 'Drag, or tap two opposite corners.' : 'Tap each corner. Tap the first point or press Finish to close the shape.';
+      btns=`<button class="btn sm" data-h="rect" aria-pressed="${ui.rect}">Rectangle</button>${ui.rect?'':'<button class="btn sm" data-h="undo">Undo point</button><button class="btn sm primary" data-h="finish">Finish</button>'}<button class="btn sm" data-h="cancel">Cancel</button>`; }
+    else if(T.geom==='line'){ txt='Tap along the line. Press Finish when done.'+(T.width?` Width ${T.width} m (change it after).`:'');
+      btns=`<button class="btn sm" data-h="undo">Undo point</button><button class="btn sm primary" data-h="finish">Finish</button><button class="btn sm" data-h="cancel">Cancel</button>`; }
+    else { txt = t==='trees' ? 'Tap to plant each tree. Keep tapping to add more.' : 'Tap to place. Keep tapping to add more.';
+      btns=`<button class="btn sm primary" data-h="cancel">Done</button>`; }
+  }
+  h.innerHTML=`<div class="txt"><b>${esc(title)}</b>${esc(txt)}</div>${btns}`; h.hidden=false;
+  h.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.h;
+    if(a==='cancel') cancelTool(); else if(a==='finish') finishDraw(); else if(a==='undo') undoPoint();
+    else if(a==='rect'){ ui.rect=!ui.rect; const tt=ui.tool; cancelTool(); startTool(tt); }
+  });
+}
+function onCreate(e){
+  const t=ui.tool, layer=e.layer; map.removeLayer(layer);
+  let ll = layer.getLatLngs(); if(e.shape!=='Line') ll=ll[0];
+  const c = ll.map(p=>[p.lat,p.lng]);
+  if(ui.calibrating){ cancelTool(); finishCalib(c); return; }
+  if(!t) return;
+  const T=TOOLS[t];
+  if((T.geom==='poly' && c.length<3) || (T.geom==='line' && c.length<2)){ cancelTool(); return; }
+  cancelTool();
+  addFeature(t, c);
+}
+function onMapClick(e){
+  if(ui.placing && ui.tool){ addFeature(ui.tool, [e.latlng.lat, e.latlng.lng], true); return; }
+  if(!ui.tool && ui.sel && Date.now()-(ui.lastEdit||0)>400){ deselect(); }
+  document.getElementById('results').hidden=true;
+}
+function addFeature(t, c, keepTool){
+  const T=TOOLS[t], f={id:uid(), t, c, p:{}};
+  if(T.ex){ if(T.single) P.ex = P.ex.filter(x=>x.t!==t); P.ex.push(f); }
+  else opt().f.push(f);
+  renderLayers(); commit();
+  if(!keepTool) select(f.id); else renderPanels();
+}
+async function finishCalib(c){
+  const u = Math.hypot(c[c.length-1][0]-c[0][0], c[c.length-1][1]-c[0][1]);
+  if(!u){ return; }
+  const r = await dialog({title:'How long is that line?', html:'<p class="sub">Enter the real length in metres. A car parking bay is about 5 m long; a road lane is about 3 m wide.</p>', fields:[{id:'m', label:'Length in metres', type:'number', value:'5', attrs:'min="0.1" step="0.1" inputmode="decimal"'}], ok:'Set scale'});
+  if(!r) return;
+  const m=parseFloat(r.m); if(!(m>0)) return;
+  P.base.scale = m/u; renderLayers(); commit(); renderPanels();
+  toast(`Scale set: ${m} m. Areas are now measured on the photo.`);
+}
+
+/* ---------- base switching ---------- */
+async function setBase(kind){
+  if(kind===P.base.kind && !(kind==='photo' && !PHOTO)) return;
+  const crossing = (kind==='photo') !== (P.base.kind==='photo');
+  const drawn = P.ex.length + P.options.reduce((s,o)=>s+o.f.length,0);
+  if(crossing && drawn){
+    const ok = await dialog({title:'Switch the site base?', html:'<p>Shapes drawn on a map and on a photo don’t line up, so switching clears what you have drawn in every option. Save a design file first if you want to keep it.</p>', ok:'Clear and switch', danger:true});
+    if(!ok){ syncBaseSeg(); return; }
+    P.ex=[]; P.options.forEach(o=>o.f=[]);
+  }
+  if(!crossing){ P.base.kind=kind; map.eachLayer(l=>{ if(l instanceof L.TileLayer) map.removeLayer(l); }); addBase(map,kind); syncBaseSeg(); commit(); return; }
+  P.base.kind=kind;
+  if(kind==='photo'){ P.base.scale=0; }
+  ui.sel=null; buildMap(); commit(); renderPanels();
+  if(kind==='photo' && !PHOTO) document.getElementById('photoStart').hidden=false;
+}
+function loadPhoto(file){
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=2200, k=Math.min(1, max/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas'); cv.width=Math.round(img.width*k); cv.height=Math.round(img.height*k);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      PHOTO = cv.toDataURL('image/jpeg', .82);
+      if(!lsSet(PHOTO_KEY, PHOTO)) toast('The photo is too big for this browser to keep. Save a design file to keep your work.');
+      P.base.kind='photo'; P.base.photoW=cv.width; P.base.photoH=cv.height; P.base.scale=0;
+      P.ex=[]; P.options.forEach(o=>o.f=[]);
+      buildMap(); commit(); renderPanels(); startCalib();
+    };
+    img.onerror=()=>toast('That file could not be read as an image.');
+    img.src=rd.result;
+  };
+  rd.readAsDataURL(file);
+}
+
+/* ---------- place search (OpenStreetMap Nominatim) ---------- */
+async function search(q){
+  const ul=document.getElementById('results');
+  ul.innerHTML='<li class="sub" style="padding:8px">Searching…</li>'; ul.hidden=false;
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&countrycodes=jm&q='+encodeURIComponent(q), {headers:{'Accept':'application/json'}});
+    const js=await r.json();
+    if(!js.length){ ul.innerHTML='<li class="sub" style="padding:8px">No places found. Try a town and street name.</li>'; return; }
+    ul.innerHTML = js.map((p,i)=>`<li><button data-i="${i}">${esc(p.display_name)}</button></li>`).join('');
+    ul.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const p=js[+b.dataset.i]; map.setView([+p.lat,+p.lon], 18); ul.hidden=true; });
+  }catch(e){ ul.innerHTML='<li class="sub" style="padding:8px">Search is unavailable right now. Pan and zoom the map instead.</li>'; }
+}
+
+/* =========================================================
+   PANELS
+   ========================================================= */
+function setTab(t){
+  ui.tab=t;
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.tab===t)));
+  ['site','design','check'].forEach(k=>document.getElementById('panel-'+k).hidden = k!==t);
+}
+function swatch(T){
+  if(T.geom==='line') return `<span class="sw line" style="background:${T.color}"></span>`;
+  if(T.geom==='point') return `<span class="sw pt" style="background:${T.color}">${T.glyph}</span>`;
+  if(T.geom==='tree') return `<span class="sw" style="background:${T.color};border-radius:50%"></span>`;
+  return `<span class="sw" style="background:${T.color}"></span>`;
+}
+function toolBtn(t, count){
+  const T=TOOLS[t];
+  return `<button class="tool" data-tool="${t}" aria-pressed="${ui.tool===t}">${swatch(T)}<span class="nm">${esc(T.name)}<small>${esc(T.plain)}</small></span><span class="ct">${count||''}</span></button>`;
+}
+function syncToolButtons(){ document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed', String(ui.tool===b.dataset.tool))); }
+function bindTools(root){ root.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{ if(ui.tool===b.dataset.tool) cancelTool(); else startTool(b.dataset.tool); }); }
+
+function renderSite(){
+  const el=document.getElementById('panel-site'), S=site(), st=stream();
+  const n = t=>P.ex.filter(f=>f.t===t).length;
+  const m=metrics(opt());
+  el.innerHTML = `
+  <section class="sec">
+    <h2>${esc(S.name)}</h2>
+    <p class="sub">${esc(S.code)} · ceiling ${fmtJ(st.ceiling)} · at least ${st.reach.toLocaleString()} people reached</p>
+    <details class="how-wrap card soft" ${P.ex.length?'':'open'}><summary>How the charette works</summary>
+      <ol class="how">
+        <li>Find your site on the satellite map, or switch to <b>Site photo</b> and upload your own.</li>
+        <li>Trace what’s there now: the boundary, the paved area that drains to the site, roofs, existing trees and the low point.</li>
+        <li>On <b>Design</b>, place Living Streets features. Build up to three options.</li>
+        <li>On <b>Check</b>, see the design rules, reach and cost turn green as you go.</li>
+        <li>Press <b>Design draft</b> for a one-page plan to print or save as a PDF.</li>
+      </ol></details>
+  </section>
+  ${needsScale()?`<div class="flag">The photo has no scale yet. <button class="btn sm" id="calibBtn">Set the scale</button></div>`:''}
+  ${P.base.kind==='photo'&&P.base.scale?`<p class="note">Photo scale set. <button class="btn sm ghost" id="calibBtn">Re-measure</button></p>`:''}
+  <section class="sec">
+    <h3>What’s there now</h3>
+    <div class="toolgrid">${['boundary','paved','roof','etree','low'].map(t=>toolBtn(t, t==='paved'&&m.catchment&&!needsScale()?fmtM2(m.catchment): n(t)||'')).join('')}</div>
+  </section>
+  <div id="selSite"></div>
+  <section class="sec">
+    <h3>Main hazard</h3>
+    <div class="seg wide" id="focusSeg">${[['flood','Flooding'],['heat','Heat'],['both','Both']].map(([k,v])=>`<button data-f="${k}" aria-pressed="${P.focus===k}">${v}</button>`).join('')}</div>
+  </section>
+  <section class="sec">
+    <h3>Who uses the site</h3>
+    <p class="sub">Direct beneficiaries, counted with a method you can explain. Count each person once.</p>
+    <div class="row2">
+      <label class="lbl">Daily users<input class="inp" type="number" min="0" inputmode="numeric" data-pp="users" value="${esc(P.people.users)}" placeholder="vendors, shoppers, commuters"></label>
+      <label class="lbl">Residents in the catchment<input class="inp" type="number" min="0" inputmode="numeric" data-pp="residents" value="${esc(P.people.residents)}"></label>
+    </div>
+    <label class="lbl">Pupils, patients, staff or workers<input class="inp" type="number" min="0" inputmode="numeric" data-pp="other" value="${esc(P.people.other)}"></label>
+    <div class="total"><span>People reached</span><span class="num" id="peopleTot">${m.people.toLocaleString()} of ${st.reach.toLocaleString()}</span></div>
+  </section>
+  <section class="sec">
+    <h3>Climate case in three lines</h3>
+    <label class="lbl">The hazard<textarea data-cl="hazard" rows="2">${esc(P.climate.hazard)}</textarea></label>
+    <label class="lbl">Who and what is exposed<textarea data-cl="exposed" rows="2">${esc(P.climate.exposed)}</textarea></label>
+    <label class="lbl">The benefit<textarea data-cl="benefit" rows="2">${esc(P.climate.benefit)}</textarea></label>
+  </section>`;
+  bindTools(el);
+  const cb=el.querySelector('#calibBtn'); if(cb) cb.onclick=startCalib;
+  el.querySelectorAll('#focusSeg button').forEach(b=>b.onclick=()=>{ P.focus=b.dataset.f; commit(); renderSite(); });
+  el.querySelectorAll('[data-pp]').forEach(i=>{ i.oninput=()=>{ P.people[i.dataset.pp]=i.value; save(); refresh(); }; i.onchange=()=>snapshot(); });
+  el.querySelectorAll('[data-cl]').forEach(i=>{ i.oninput=()=>{ P.climate[i.dataset.cl]=i.value; save(); }; i.onchange=()=>snapshot(); });
+  renderSel();
+}
+
+function renderDesign(){
+  const el=document.getElementById('panel-design'), S=site(), o=opt();
+  const avail = Object.keys(TOOLS).filter(t=>{ const T=TOOLS[t]; return !T.ex && S.comps.includes(T.comp||t); });
+  const cnt = t=>o.f.filter(f=>f.t===t).length;
+  const groups = Object.keys(KIND).map(k=>[k, avail.filter(t=>TOOLS[t].kind===k)]).filter(g=>g[1].length);
+  el.innerHTML = `
+  <section class="sec">
+    <h2>Design options</h2>
+    <div class="opts">${P.options.map((x,i)=>`<button class="opt" data-o="${i}" aria-pressed="${i===P.active}">${esc(x.name)}</button>`).join('')}
+      ${P.options.length<3?'<button class="btn sm ghost" id="addOpt">+ Add option</button>':''}</div>
+    <div class="opts"><button class="btn sm" id="renOpt">Rename</button><button class="btn sm" id="dupOpt" ${P.options.length>=3?'disabled':''}>Duplicate</button><button class="btn sm danger" id="delOpt" ${P.options.length<2?'disabled':''}>Delete</button></div>
+  </section>
+  <div id="selDesign"></div>
+  <section class="sec">
+    <h3>Add features</h3>
+    <p class="sub">Only the features offered for a ${esc(S.name.toLowerCase())} are listed.</p>
+    <div class="toolgrid">${groups.map(([k,ts])=>`<div class="kindlbl">${KIND[k]}${k==='open'?' · can draw the 15% top-up':''}</div>${ts.map(t=>toolBtn(t,cnt(t))).join('')}`).join('')}</div>
+  </section>
+  <section class="sec">
+    <h3>In ${esc(o.name)}</h3>
+    ${o.f.length ? `<ul class="items">${o.f.map(f=>`<li><button data-sel="${f.id}"><span class="dot" style="background:${TOOLS[f.t].color}"></span><span>${esc(TOOLS[f.t].name)}</span><span class="q">${qtyLabel(f)||''}</span></button></li>`).join('')}</ul>` : '<p class="sub">Nothing placed yet. Pick a feature above, then tap on the map.</p>'}
+  </section>`;
+  bindTools(el);
+  el.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{ cancelTool(); deselect(false); P.active=+b.dataset.o; renderLayers(); commit(); renderPanels(); });
+  const add=el.querySelector('#addOpt'); if(add) add.onclick=()=>{ P.options.push({id:uid(), name:'Option '+'ABC'[P.options.length], f:[]}); P.active=P.options.length-1; deselect(false); renderLayers(); commit(); renderPanels(); };
+  el.querySelector('#renOpt').onclick=async()=>{ const r=await dialog({title:'Rename option', fields:[{id:'n',label:'Name',value:o.name}], ok:'Rename'}); if(r&&r.n.trim()){ o.name=r.n.trim().slice(0,40); commit(); renderPanels(); } };
+  el.querySelector('#dupOpt').onclick=()=>{ if(P.options.length>=3) return; const c=JSON.parse(JSON.stringify(o)); c.id=uid(); c.name=o.name+' copy'; c.f.forEach(f=>f.id=uid()); P.options.push(c); P.active=P.options.length-1; deselect(false); renderLayers(); commit(); renderPanels(); };
+  el.querySelector('#delOpt').onclick=async()=>{ if(P.options.length<2) return; const ok=await dialog({title:`Delete ${o.name}?`, html:'<p>This removes every feature in this option. You can undo it.</p>', ok:'Delete', danger:true}); if(!ok) return; P.options.splice(P.active,1); P.active=0; deselect(false); renderLayers(); commit(); renderPanels(); };
+  el.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{ const id=b.dataset.sel, l=layerById.get(id); select(id); if(l){ if(l.getBounds) map.fitBounds(l.getBounds(), {maxZoom:map.getZoom(), padding:[60,60]}); else map.panTo(l.getLatLng()); } });
+  renderSel();
+}
+
+function renderSel(){
+  const a=document.getElementById('selSite'), b=document.getElementById('selDesign');
+  if(a) a.innerHTML=''; if(b) b.innerHTML='';
+  const f = ui.sel && findF(ui.sel); if(!f) return;
+  const T=TOOLS[f.t], host = T.ex ? a : b; if(!host) return;
+  let props='';
+  if(T.geom==='line' && T.width) props+=`<label class="lbl">Width (m)<input class="inp" type="number" min="0.3" max="20" step="0.1" data-p="width" value="${f.p.width??T.width}"></label>`;
+  if(T.height) props+=`<label class="lbl">Wall height (m)<input class="inp" type="number" min="0.5" max="20" step="0.5" data-p="height" value="${f.p.height??T.height}"></label>`;
+  if(f.t==='garden') props+=`<div class="row2"><label class="lbl">Rain tanks<input class="inp" type="number" min="0" max="10" step="1" data-p="tanks" value="${f.p.tanks??1}"></label><label class="lbl">Gallons each<input class="inp" type="number" min="100" step="100" data-p="gallons" value="${f.p.gallons??1000}"></label></div>`;
+  if(f.t==='etree') props+=`<div class="seg wide"><button data-keep="1" aria-pressed="${!f.p.remove}">Keep</button><button data-keep="0" aria-pressed="${!!f.p.remove}">Remove</button></div>`;
+  const cost = featCost(f);
+  host.innerHTML = `<div class="selcard">
+    <h3>${esc(T.name)}</h3>
+    ${T.tech?`<p class="note">Technical name: ${esc(T.tech)}</p>`:''}
+    <p class="sub" style="color:var(--ink)">${esc(T.plain)}</p>
+    ${qtyLabel(f)?`<div class="total"><span>Size</span><span class="num">${qtyLabel(f)}</span></div>`:''}
+    ${cost?`<div class="total"><span>Works estimate</span><span class="num">${fmtJ(cost)}</span></div>`:''}
+    ${T.placeholder?`<p class="note">${esc(T.placeholder)}.</p>`:''}${T.unpriced?`<p class="note">${esc(T.unpriced)}.</p>`:''}
+    ${props}
+    <p class="note">${T.geom==='poly'||T.geom==='line' ? 'Drag the white handles to reshape, or drag the shape to move it.' : 'Drag it on the map to move it.'}</p>
+    <div class="acts"><button class="btn sm danger" id="selDel">Delete</button><button class="btn sm" id="selDone">Done</button></div></div>`;
+  host.querySelector('#selDel').onclick=deleteSel;
+  host.querySelector('#selDone').onclick=()=>deselect();
+  host.querySelectorAll('[data-p]').forEach(i=>{ i.onchange=()=>{ const v=parseFloat(i.value); if(!(v>=0)) return; f.p[i.dataset.p]=v; const l=layerById.get(f.id); if(l&&l.setStyle&&TOOLS[f.t].geom==='line') l.setStyle({weight:lineWeight(f)}); commit(); renderSel(); }; });
+  host.querySelectorAll('[data-keep]').forEach(btn=>btn.onclick=()=>{ f.p.remove = btn.dataset.keep==='0'; const l=layerById.get(f.id); l.setIcon(ptIcon(f,true)); commit(); renderSel(); });
+}
+
+function renderCheck(){
+  const el=document.getElementById('panel-check'), o=opt(), m=metrics(o), cs=checks(m), st=stream();
+  const groups=[...new Set(cs.map(c=>c.group))];
+  const lineRows = Object.values(m.lines).filter(L=>L.cost>0).sort((a,b)=>b.cost-a.cost).map(L=>{ const T=TOOLS[L.t];
+    const q = T.geom==='poly'||T.geom==='line' ? fmtM2(L.q) : L.n+(L.t==='trees'?' trees':' no.');
+    return `<tr><td>${esc(T.name)} <span class="note">· ${q}</span></td><td>${fmtJ(L.cost)}</td></tr>`; }).join('');
+  const pctBar = Math.min(100, m.total/m.ceiling*100);
+  el.innerHTML = `
+  <section class="sec">
+    <h2>${esc(o.name)} against the call</h2>
+    ${needsScale()?'<div class="flag">Set the photo scale on the Site tab before reading the numbers.</div>':''}
+  </section>
+  ${groups.map(g=>`<section class="sec"><h3>${g}</h3><ul class="checks">${cs.filter(c=>c.group===g).map(c=>`<li class="chk">${markHTML(c.status)}<div><b>${esc(c.label)}</b><span>${esc(c.detail)}</span>${c.confirm?`<label><input type="checkbox" data-cf="${c.confirm}" ${P.confirm[c.confirm]?'checked':''}> The team confirms this</label>`:''}</div></li>`).join('')}</ul></section>`).join('')}
+  <section class="sec">
+    <h3>Key numbers</h3>
+    <div class="stats">
+      <div class="stat"><div class="v">${m.plantedPct==null?'–':Math.round(m.plantedPct*100)+'%'}</div><div class="k">planted</div></div>
+      <div class="stat"><div class="v">${m.catchment?fmtM2(m.treated):'–'}</div><div class="k">paved area treated${m.catchment?' of '+fmtM2(m.catchment):''}</div></div>
+      <div class="stat"><div class="v">${m.trees}</div><div class="k">new trees</div></div>
+      <div class="stat"><div class="v">${fmtM2(m.shade)}</div><div class="k">new shade at maturity</div></div>
+      <div class="stat"><div class="v">${m.gardenA?fmtM2(m.gardenA):'None'}</div><div class="k">food garden${m.tanks?` · ${m.tanks} tank${m.tanks>1?'s':''}`:''}</div></div>
+      <div class="stat"><div class="v">${m.people.toLocaleString()}</div><div class="k">people reached</div></div>
+    </div>
+  </section>
+  <section class="sec">
+    <h3>Cost estimate</h3>
+    <div class="meter${m.total>m.ceiling?' over':''}" role="img" aria-label="${fmtJ(m.total)} of ${fmtJ(m.ceiling)}"><i style="width:${pctBar}%"></i></div>
+    <div class="total" style="border:0;padding:0"><span>${fmtJ(m.total)}</span><span class="num">of ${fmtJ(m.ceiling)}</span></div>
+    ${m.works ? `<table class="cost">${lineRows}
+      <tr class="sub"><td>Works subtotal</td><td>${fmtJ(m.works)}</td></tr>
+      ${Object.entries(m.soft).map(([k,v])=>`<tr class="sub"><td>${SOFT_LABEL[k]}</td><td>${fmtJ(v)}</td></tr>`).join('')}
+      <tr class="tot"><td>Estimated grant request</td><td>${fmtJ(m.total)}</td></tr></table>` : '<p class="sub">Add features to see a cost.</p>'}
+    ${m.flags.map(x=>`<p class="flag">${esc(x)}.</p>`).join('')}
+    <p class="note">Planning rates from the concept note. Design, inclusion, monitoring, management and contingency are added in the same proportions as the ${esc(st.label)} budget. This is a planning estimate, not a bill of quantities.</p>
+  </section>
+  <section class="sec">
+    <details class="card soft"><summary style="cursor:pointer;font-weight:600">Assumptions</summary>
+      <label class="lbl">Paved m² one m² of planted drain, rain garden or rain park can treat
+        <input class="inp" type="number" min="0.5" max="50" step="0.5" data-as="treatRatio" value="${P.assume.treatRatio}"></label>
+      <p class="note">Default 3, from the concept-note quantities: 150–300 m of planted drain plus rain gardens treating 500–800 m² of paving. Set it from the hydraulic sizing once you have it.</p>
+      <label class="lbl">Tree canopy radius at maturity (m)<input class="inp" type="number" min="1" max="10" step="0.5" data-as="canopyR" value="${P.assume.canopyR}"></label>
+      <label class="lbl">Tree pit<select class="sel" data-as="treePit">${Object.entries(TREE_PIT).map(([k,v])=>`<option value="${k}" ${P.assume.treePit===k?'selected':''}>${v.label}</option>`).join('')}</select></label>
+    </details>
+  </section>
+  <section class="sec">
+    <h3>Open questions</h3>
+    <textarea id="qs" rows="4" placeholder="What the team still needs to find out, e.g. who owns the corner lot, where the drain outfalls, NWA plans for the road.">${esc(P.questions)}</textarea>
+  </section>`;
+  el.querySelectorAll('[data-cf]').forEach(i=>i.onchange=()=>{ P.confirm[i.dataset.cf]=i.checked; commit(); });
+  el.querySelectorAll('[data-as]').forEach(i=>i.onchange=()=>{ const k=i.dataset.as; P.assume[k] = k==='treePit' ? i.value : (parseFloat(i.value)||DEFAULT_ASSUME[k]); renderLayers(); commit(); });
+  const q=el.querySelector('#qs'); q.oninput=()=>{ P.questions=q.value; save(); }; q.onchange=()=>snapshot();
+}
+
+function renderScore(){
+  const m=metrics(opt()), cs=checks(m), by=id=>cs.find(c=>c.id===id);
+  const okN = cs.filter(c=>c.status==='ok').length;
+  const pill=(st,txt,sm)=>`<button class="pill">${markHTML(st)}${txt}${sm?` <small>${sm}</small>`:''}</button>`;
+  document.getElementById('score').innerHTML = [
+    pill(okN===cs.length?'ok':'todo', `${okN} of ${cs.length} checks`, esc(opt().name)),
+    pill(by('planted').status, m.plantedPct==null?'Planted –':`Planted ${Math.floor(m.plantedPct*100)}%`, 'need 60%'),
+    pill(by('runoff').status, m.treatedPct==null?'Runoff –':`Runoff ${Math.min(999,Math.floor(m.treatedPct*100))}%`, 'need 50%'),
+    pill(m.trees?'ok':'todo', `${m.trees} trees`, m.trees?fmtM2(m.shade)+' shade':''),
+    pill(by('reach').status, `${m.people.toLocaleString()} people`, 'need '+m.reach.toLocaleString()),
+    pill(by('cost').status, fmtJ(m.total), 'of '+fmtJ(m.ceiling))
+  ].join('');
+  document.querySelectorAll('#score .pill').forEach(p=>p.onclick=()=>setTab('check'));
+}
+function renderPanels(){ renderSite(); renderDesign(); renderCheck(); renderScore(); }
+/* Refresh numbers without rebuilding a panel the user is typing in. */
+function typingIn(id){ const a=document.activeElement, el=document.getElementById(id); return !!(a && el.contains(a) && a.matches('input,textarea,select')); }
+function refresh(full){
+  renderScore();
+  if(full || !typingIn('panel-site')) renderSite();
+  else { const pt=document.getElementById('peopleTot'); if(pt) pt.textContent = `${metrics(opt()).people.toLocaleString()} of ${stream().reach.toLocaleString()}`; }
+  if(full || !typingIn('panel-design')) renderDesign();
+  if(full || !typingIn('panel-check')) renderCheck();
+}
+
+/* =========================================================
+   COMPARE + DRAFT
+   ========================================================= */
+function compare(){
+  const ms=P.options.map(o=>({o, m:metrics(o)})).map(x=>({...x, c:checks(x.m)}));
+  const rows=[
+    ['Checks passed', x=>`${x.c.filter(c=>c.status==='ok').length} of ${x.c.length}`],
+    ['Planted', x=>x.m.plantedPct==null?'–':Math.round(x.m.plantedPct*100)+'%'],
+    ['Paved area treated', x=>x.m.catchment?`${fmtM2(x.m.treated)} (${Math.floor(Math.min(1,x.m.treatedPct)*100)}%)`:'–'],
+    ['New trees', x=>x.m.trees],
+    ['New shade at maturity', x=>fmtM2(x.m.shade)],
+    ['Food garden', x=>x.m.gardenA?fmtM2(x.m.gardenA):'None'],
+    ['Installation footprint', x=>fmtM2(x.m.footprint)],
+    ['Estimated cost', x=>`${fmtJ(x.m.total)} of ${fmtJ(x.m.ceiling)}`],
+    ['Failing checks', x=>x.c.filter(c=>c.status==='bad').map(c=>c.label).join('; ')||'None']
+  ];
+  const html = `<div class="cmp-wrap"><table class="cmp"><thead><tr><th></th>${ms.map((x,i)=>`<th>${esc(x.o.name)}${i===P.active?' <span class="note">(open)</span>':''}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(([k,fn])=>`<tr><td>${k}</td>${ms.map(x=>`<td class="${k==='Failing checks'?'':'v'}">${esc(fn(x))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <p class="note">People reached (${ms[0].m.people.toLocaleString()}) and the confirmed rules are shared by all options.</p>`;
+  dialog({title:'Compare options', html, ok:null, cancel:'Close', wide:true});
+}
+let draftMap=null;
+function openDraft(){
+  cancelTool(); deselect();
+  const o=opt(), m=metrics(o), cs=checks(m), S=site(), d=document.getElementById('draft');
+  const used=[...new Set([...P.ex, ...o.f].map(f=>f.t))];
+  const today=new Date().toLocaleDateString('en-JM',{day:'numeric',month:'long',year:'numeric'});
+  d.innerHTML = `<div class="draft-acts"><button class="btn primary" id="prBtn">Print or save as PDF</button><button class="btn" id="dcBtn">Close</button></div>
+  <article class="sheet">
+    <header><div class="meta">Living Streets · J-USE Call 2 · Design draft · ${esc(today)}</div>
+      <h1>${esc(P.name||'Untitled site')} — ${esc(o.name)}</h1>
+      <div class="meta">${esc(S.code)} · ${esc(S.name)} · Main hazard: ${({flood:'flooding',heat:'heat',both:'flooding and heat'})[P.focus]}</div></header>
+    <div class="grid">
+      <div><div id="draftMap"></div><div class="legend" style="margin-top:6px">${used.map(t=>`<span><i style="background:${TOOLS[t].color}"></i>${esc(TOOLS[t].name)}</span>`).join('')}</div></div>
+      <div class="case">
+        <h2>Climate case</h2>
+        <p><b>Hazard</b>${esc(P.climate.hazard)}</p>
+        <p><b>Exposed</b>${esc(P.climate.exposed)}</p>
+        <p><b>Benefit</b>${esc(P.climate.benefit)}</p>
+        <h2 style="margin-top:8px">Numbers</h2>
+        <div class="kv">
+          <span>Planted share</span><span>${m.plantedPct==null?'–':Math.round(m.plantedPct*100)+'%'}</span>
+          <span>Paved catchment</span><span>${fmtM2(m.catchment)}</span>
+          <span>Paved area treated</span><span>${fmtM2(m.treated)}</span>
+          <span>New trees · shade at maturity</span><span>${m.trees} · ${fmtM2(m.shade)}</span>
+          <span>Food garden</span><span>${m.gardenA?fmtM2(m.gardenA):'None'}</span>
+          <span>People reached</span><span>${m.people.toLocaleString()}</span>
+          <span>Works estimate</span><span>${fmtJ(m.works)}</span>
+          <span class="strong">Estimated grant request</span><span class="strong">${fmtJ(m.total)} of ${fmtJ(m.ceiling)}</span>
+        </div>
+      </div>
+    </div>
+    <section><h2>Checks</h2><ul class="cl">${cs.map(c=>`<li>${markHTML(c.status)}<span>${esc(c.label)}</span></li>`).join('')}</ul></section>
+    <section><h2>Open questions</h2><p class="qs">${esc(P.questions||'None recorded.')}</p></section>
+    <footer class="foot">Planning estimate from the J-USE Call 2 planning rates, with design, inclusion, monitoring, management and contingency added in the concept-note proportions. Not a bill of quantities. ${m.flags.map(esc).join('. ')}${m.flags.length?'.':''} Checks marked ? are for the team to confirm.</footer>
+  </article>`;
+  d.hidden=false;
+  document.getElementById('dcBtn').onclick=closeDraft;
+  document.getElementById('prBtn').onclick=()=>window.print();
+  const photo=P.base.kind==='photo';
+  draftMap = L.map('draftMap', {...(photo?{crs:L.CRS.Simple, minZoom:-5, maxZoom:5, zoomSnap:.1}:{maxZoom:22, zoomSnap:.1}), zoomControl:false, attributionControl:!photo, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, boxZoom:false, keyboard:false, touchZoom:false});
+  if(photo){ if(PHOTO) addBase(draftMap,'photo',PHOTO); } else addBase(draftMap,P.base.kind);
+  const g=L.featureGroup().addTo(draftMap);
+  const all=[...P.ex, ...o.f];
+  for(const f of all){ const l=makeLayer(f,draftMap,false); l.addTo(g); }
+  const fit=()=>{ const b=P.ex.find(f=>f.t==='boundary'); if(b) draftMap.fitBounds(L.polygon(b.c).getBounds(), {padding:[12,12]}); else if(all.length) draftMap.fitBounds(g.getBounds(), {padding:[18,18]}); else if(photo) draftMap.fitBounds([[0,0],[P.base.photoH,P.base.photoW]]); else draftMap.setView(P.base.center,P.base.zoom); };
+  setTimeout(()=>{ draftMap.invalidateSize(); fit(); draftLineWeights(g, all); }, 60);
+}
+function draftLineWeights(g, all){
+  const z=draftMap.getZoom(), ppm = P.base.kind==='photo' ? Math.pow(2,z)/(P.base.scale||1) : Math.pow(2,z+8)/(40075016.686*Math.cos(draftMap.getCenter().lat*Math.PI/180));
+  let i=0; const lines=all.filter(f=>TOOLS[f.t].geom==='line');
+  g.eachLayer(l=>{ if(l instanceof L.Polyline && !(l instanceof L.Polygon)){ const f=lines[i++]; if(f){ const T=TOOLS[f.t]; const w=T.height?0.6:(f.p.width??T.width); l.setStyle({weight:Math.max(3,Math.min(60,w*ppm))}); } } });
+}
+function closeDraft(){ if(draftMap){ draftMap.remove(); draftMap=null; } const d=document.getElementById('draft'); d.hidden=true; d.innerHTML=''; }
+
+/* =========================================================
+   FILES
+   ========================================================= */
+function slug(s){ return (s||'living-streets-design').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,50)||'design'; }
+function saveFile(){
+  const data=JSON.stringify({...P, photo: P.base.kind==='photo'?PHOTO:null});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  a.download=slug(P.name)+'.json'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function openFile(file){
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(rd.result); if(!d||d.v!==1||!Array.isArray(d.options)) throw 0;
+      PHOTO = d.photo || null; delete d.photo;
+      P = Object.assign(freshProject(), d); P.assume=Object.assign({...DEFAULT_ASSUME}, d.assume||{});
+      if(P.base.kind==='photo'){ if(PHOTO) lsSet(PHOTO_KEY,PHOTO); else P.base.kind='sat'; }
+      ui.sel=null; afterLoad(); toast('Design opened.');
+    }catch(e){ toast('That file is not a Living Streets design file.'); }
+  };
+  rd.readAsText(file);
+}
+async function newDesign(){
+  const ok=await dialog({title:'Start a new design?', html:'<p>This clears the current design from this browser. Save a design file first if you want to keep it.</p>', ok:'Start new', danger:true});
+  if(!ok) return; P=freshProject(); PHOTO=null; try{ localStorage.removeItem(PHOTO_KEY); }catch(e){} ui.sel=null; afterLoad();
+}
+function afterLoad(){
+  document.getElementById('projName').value=P.name; document.getElementById('siteType').value=P.site;
+  buildMap(); hist.length=0; snapshot(); save(); renderPanels(); setTab('site');
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+function boot(){
+  load();
+  const st=document.getElementById('siteType');
+  st.innerHTML = [1,2].map(s=>`<optgroup label="${STREAMS[s].label}">${Object.entries(SITES).filter(([,v])=>v.stream===s).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('')}</optgroup>`).join('');
+  st.value=P.site;
+  st.onchange=()=>{
+    const old=SITES[P.site], nw=SITES[st.value];
+    for(const k of ['hazard','exposed','benefit']) if(!P.climate[k] || P.climate[k]===old[k]) P.climate[k]=nw[k];
+    P.site=st.value; cancelTool(); commit(); renderPanels();
+    const avail=new Set(nw.comps), off=P.options.flatMap(o=>o.f).filter(f=>!avail.has(TOOLS[f.t].comp||f.t));
+    if(off.length) toast(`${off.length} placed feature${off.length>1?'s are':' is'} not usually offered for this site type. ${off.length>1?'They stay':'It stays'} in the design; check with the call team.`);
+  };
+  const pn=document.getElementById('projName'); pn.value=P.name; pn.oninput=()=>{ P.name=pn.value; save(); }; pn.onchange=()=>snapshot();
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+  document.querySelectorAll('#baseSeg button').forEach(b=>b.onclick=()=>setBase(b.dataset.b));
+  document.getElementById('undoBtn').onclick=undo;
+  document.getElementById('cmpBtn').onclick=compare;
+  document.getElementById('draftBtn').onclick=openDraft;
+  const fm=document.getElementById('fileMenu'), closeFm=()=>fm.removeAttribute('open');
+  document.getElementById('saveFile').onclick=()=>{ closeFm(); saveFile(); };
+  document.getElementById('openFile').onclick=()=>{ closeFm(); document.getElementById('jsonInput').click(); };
+  document.getElementById('newDesign').onclick=()=>{ closeFm(); newDesign(); };
+  document.addEventListener('click', e=>{ if(!fm.contains(e.target)) closeFm(); });
+  document.getElementById('jsonInput').onchange=e=>{ const f=e.target.files[0]; if(f) openFile(f); e.target.value=''; };
+  document.getElementById('photoInput').onchange=e=>{ const f=e.target.files[0]; if(f) loadPhoto(f); e.target.value=''; };
+  document.getElementById('pickPhoto').onclick=()=>document.getElementById('photoInput').click();
+  document.getElementById('backToMap').onclick=()=>{ P.base.kind='sat'; buildMap(); commit(); renderPanels(); };
+  document.getElementById('searchForm').onsubmit=e=>{ e.preventDefault(); const q=document.getElementById('searchQ').value.trim(); if(q) search(q); };
+  document.addEventListener('keydown', e=>{
+    const typing = e.target.matches && e.target.matches('input,textarea,select');
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !typing){ e.preventDefault(); undo(); }
+    else if(e.key==='Escape'){ if(!document.getElementById('draft').hidden) closeDraft(); else if(ui.tool) cancelTool(); else if(ui.sel) deselect(); }
+    else if((e.key==='Delete'||e.key==='Backspace') && ui.sel && !typing){ e.preventDefault(); deleteSel(); }
+  });
+  buildMap(); snapshot(); renderPanels(); setTab('site');
+}
+boot();
+</script>
+</body>
+</html>
